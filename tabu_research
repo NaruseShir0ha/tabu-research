@@ -1,0 +1,160 @@
+#include<iostream>//检验过的算例gr17.tsp", "gr21.tsp", "gr24.tsp", "fri26.tsp", "gr24.tsp", "gr48.tsp", "hk48.tsp"
+#include<string>
+#include<algorithm>
+using namespace std;
+#define TABU_SIZE 10 //禁忌代数
+#define SWAPSIZE 5      //对于每个点，都只选与它距离较小的前SWAPSIZE个与它交换 
+#define ITERATIONS 100 //迭代次数为100次
+double adj[60][60];//最多60座城市，记录城市之间的距离
+int ordered[60][60];
+int city1[60], city2[60], path[60];
+int bestIteration;
+int tabuList[2000][4];//表示禁忌表，0、1两列是要交换的点，第2列是这种交换下的路径长度，第3列是禁忌长度 
+void CreateRandOrder(int* city, const int &N)
+{
+	int i, j;
+	for (i = 0; i < N; i++)
+	{
+		city[i] = rand() % N;
+		for (j = 0; j < i; j++)
+		{
+			if (city[i] == city[j])
+			{
+				i--;
+				break;
+			}
+		}
+	}
+}//随机打乱city的序号，中间的循环是避免重复。
+double GetPathLen(int* city, const int &N)
+{
+	double res = adj[city[N - 1]][city[0]];
+	int i;
+	for (i = 1; i < N; i++)
+	{
+		res += adj[city[i]][city[i - 1]];//沿着顺序走一圈
+	}
+	return res;//得到走一圈的路径总长度
+}
+void UpdateTabuList(int len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+	{
+		if (tabuList[i][3] > 0)
+			tabuList[i][3]--;
+	}
+}
+double TabuSearch(const int &N)
+{
+	int countI, countN, neighbour_size = N*(N - 1) / 2;//前面两个是计数变量，neighbor_size记录边数
+	double bestDis, curDis, tmpDis, finalDis = 0x7fffffff;
+	bestIteration = 0;
+	string bestCode, curCode, tmpCode;
+	int i = 0, j, k;
+	for (j = 0; j < N - 1; j++)
+	{
+		for (k = j + 1; k < N; k++)
+		{
+			tabuList[i][0] = j;
+			tabuList[i][1] = k;
+			tabuList[i][2] = 0x7fffffff;
+			i++;
+		}
+	}//初始化禁忌表，记录所有两两组合的可能，路径长度初始化为无穷大。
+	for (i = 0; i < 25; i++)
+	{
+		CreateRandOrder(city1, N);//随机组合生成随即城市序列，每次不跳出一样，有利于跳出局部最优
+		bestDis = GetPathLen(city1, N);	
+		countI = ITERATIONS;//从此开始求解，迭代次数为ITERATIONS
+		int a, b;
+		int pardon[2], curBest[2];
+		while (countI--)//超出迭代次数之后退出
+		{
+			countN = neighbour_size;
+			pardon[0] = pardon[1] = curBest[0] = curBest[1] = 0x7fffffff;
+			memcpy(city2, city1, sizeof(city2));
+			while (countN--)
+			{
+				a = tabuList[countN][0];//作出交换操作再求总长度
+				b = tabuList[countN][1];
+				swap(city2[a], city2[b]);
+				tmpDis = GetPathLen(city2, N);
+				//如果新的解在禁忌表中，就只存特赦相关信息，即最小值和达成最小值时是哪两个交换 
+				if (tabuList[countN][3] > 0)
+				{
+					tabuList[countN][2] = 0x7fffffff;
+					if (tmpDis < pardon[1])
+					{
+						pardon[0] = countN;
+						pardon[1] = tmpDis;
+					}//找最小值更新操作
+				}
+				else                      //如果不在禁忌表中，就把距离存起来
+				{
+					tabuList[countN][2] = tmpDis;
+				}
+				swap(city2[a], city2[b]);//还原后进入下一个循环，寻找下一对
+			}
+			for (i = 0; i < neighbour_size; i++)//遍历求没有禁忌的最小值
+			{
+				if (tabuList[i][3] == 0 && tabuList[i][2] < curBest[1])
+				{
+					curBest[0] = i;
+					curBest[1] = tabuList[i][2];
+				}
+			}
+			if (curBest[0] = 0x7fffffff || pardon[1] < bestDis)//再看在禁忌中是否能特赦
+			{
+				curBest[0] = pardon[0];
+				curBest[1] = pardon[1];
+			}
+			if (curBest[1] < bestDis)//更新此次循环的最优值
+			{
+				bestDis = curBest[1];
+				tabuList[curBest[0]][3] = TABU_SIZE;
+				bestIteration = ITERATIONS - countI;
+				a = tabuList[curBest[0]][0];
+				b = tabuList[curBest[0]][1];
+				swap(city1[a], city1[b]);
+			}
+			UpdateTabuList(neighbour_size);
+		}
+		if (bestDis < finalDis)//更新全局最优
+		{
+			finalDis = bestDis;
+			memcpy(path, city1, sizeof(path));
+		}
+	}
+	return finalDis;
+}
+int main()
+{
+	int n;//n是城市数
+	int i, j;
+	while(cin>>n)
+	{
+		memset(adj, 0, sizeof(adj));
+		memset(city1, 0, sizeof(city1));
+		memset(city2, 0, sizeof(city2));
+		memset(tabuList, 0, sizeof(tabuList));
+		memset(path, 0, sizeof(path));
+		for (i = 0; i < n; i++)
+		{
+			for (j = 0; j <= i; j++)
+			{
+				cin >> adj[i][j];
+				adj[j][i] = adj[i][j];
+			}
+		}
+		int distance = TabuSearch(n);
+		cout << "distance:" << distance << endl;
+		cout << "path" << endl;
+		for (i = 0; i < n; i++)
+		{
+			cout << path[i] + 1 << " ";
+		}
+		cout << endl;
+	}
+	return 0;
+}
