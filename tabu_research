@@ -1,4 +1,5 @@
 #include<iostream>//检验过的算例gr17.tsp", "gr21.tsp", "gr24.tsp", "fri26.tsp", "gr24.tsp", "gr48.tsp", "hk48.tsp"
+#pragma  warning (disable:4996)
 #include<string>
 #include<algorithm>
 #include<vector>
@@ -15,8 +16,9 @@ vector<vector<int>>  ordered;
 vector<int> city1, city2, path;
 queue<int> cont;
 int bestIteration;
-int tabuList[2000][4];//表示禁忌表，0、1两列是要交换的点，第2列是这种交换下的路径长度，第3列是禁忌长度 
+//int tabuList[2000][4];//表示禁忌表，0、1两列是要交换的点，第2列是这种交换下的路径长度，第3列是禁忌长度 
 					  //void CreateRandOrder(int* city, const int &N)
+vector<vector<int>> tabuList;
 void CreateRandOrder(vector<int> &city, const int &N)
 {
 	int i, j;
@@ -161,6 +163,17 @@ int main()
 		}
 		cont.pop();
 		n = cont.size() - 1;
+		for (i = 0; i < n + 5; i++)
+		{
+			tabuList.push_back(vector<int>());
+		}
+		for (i = 0; i < n+5; i++)
+		{
+			for (j = 0; j < 4; j++)
+			{
+				tabuList[i].push_back(0);
+			}
+		}
 		(int)n = sqrt(2 * n + 1.0 / 4) - 1.0 / 2;
 		for (i = 0; i < n; i++)
 		{
@@ -178,7 +191,7 @@ int main()
 				ordered[i].push_back(0);
 			}
 		}
-		memset(tabuList, 0, sizeof(tabuList));
+		//memset(tabuList, 0, sizeof(tabuList));
 		for (i = 0; i < n; i++)
 		{
 			for (j = 0; j <= i; j++)
